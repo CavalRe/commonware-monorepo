@@ -33,14 +33,6 @@ pub trait Hasher<F: Family>: Clone + Send + Sync {
         self.hash(&[&(*pos).to_be_bytes(), left, right])
     }
 
-    /// Computes digests for two nodes at once.
-    ///
-    /// Must be equivalent to two [`node_digest`](Self::node_digest) calls.
-    fn node_digest_pair(
-        &self,
-        nodes: [(Position<F>, &Self::Digest, &Self::Digest); 2],
-    ) -> (Self::Digest, Self::Digest);
-
     /// Computes the digests of many nodes, each given as its position and the digests of its
     /// children, so the hasher can hash them together.
     ///
@@ -213,20 +205,6 @@ impl<F: Family, H: CHasher> Hasher<F> for Standard<H> {
         Self::root_bagging(self)
     }
 
-    fn node_digest_pair(
-        &self,
-        nodes: [(Position<F>, &Self::Digest, &Self::Digest); 2],
-    ) -> (Self::Digest, Self::Digest) {
-        let [
-            (left_pos, left_left, left_right),
-            (right_pos, right_left, right_right),
-        ] = nodes;
-        H::hash_pair(
-            &[&(*left_pos).to_be_bytes(), left_left, left_right],
-            &[&(*right_pos).to_be_bytes(), right_left, right_right],
-        )
-    }
-
     fn node_digests(
         &self,
         nodes: &[(Position<F>, Self::Digest, Self::Digest)],
@@ -325,13 +303,6 @@ impl<F: Family, T: Hasher<F>> Hasher<F> for &T {
         )
     }
 
-    fn node_digest_pair(
-        &self,
-        nodes: [(Position<F>, &Self::Digest, &Self::Digest); 2],
-    ) -> (Self::Digest, Self::Digest) {
-        (**self).node_digest_pair(nodes)
-    }
-
     fn node_digests(
         &self,
         nodes: &[(Position<F>, Self::Digest, Self::Digest)],
@@ -364,20 +335,6 @@ mod tests {
     #[test]
     fn test_root_sha256() {
         test_root::<Sha256>();
-    }
-
-    #[test]
-    fn test_node_digest_pair_matches_node_digest() {
-        let hasher: Standard<Sha256> = Standard::new(ForwardFold);
-        let d1 = test_digest::<Sha256>(1);
-        let d2 = test_digest::<Sha256>(2);
-        let d3 = test_digest::<Sha256>(3);
-        let d4 = test_digest::<Sha256>(4);
-
-        let (left, right) =
-            hasher.node_digest_pair([(Position::new(2), &d1, &d2), (Position::new(5), &d3, &d4)]);
-        assert_eq!(left, hasher.node_digest(Position::new(2), &d1, &d2));
-        assert_eq!(right, hasher.node_digest(Position::new(5), &d3, &d4));
     }
 
     #[test]

@@ -254,28 +254,6 @@ impl<F: Graftable, H: HasherTrait<F>> HasherTrait<F> for GraftedHasher<F, H> {
         self.inner.node_digest(ops_pos, left, right)
     }
 
-    fn node_digest_pair(
-        &self,
-        nodes: [(Position<F>, &Self::Digest, &Self::Digest); 2],
-    ) -> (Self::Digest, Self::Digest) {
-        let [
-            (left_pos, left_left, left_right),
-            (right_pos, right_left, right_right),
-        ] = nodes;
-        self.inner.node_digest_pair([
-            (
-                grafted_to_ops_pos::<F>(left_pos, self.grafting_height),
-                left_left,
-                left_right,
-            ),
-            (
-                grafted_to_ops_pos::<F>(right_pos, self.grafting_height),
-                right_left,
-                right_right,
-            ),
-        ])
-    }
-
     fn leaf_digests(&self, leaves: &[(Position<F>, &[u8])]) -> Vec<Self::Digest> {
         leaves
             .iter()
@@ -422,20 +400,6 @@ impl<F: Graftable, H: Hasher> HasherTrait<F> for Verifier<'_, F, H> {
                 }
             }
         }
-    }
-
-    fn node_digest_pair(
-        &self,
-        nodes: [(merkle::Position<F>, &H::Digest, &H::Digest); 2],
-    ) -> (H::Digest, H::Digest) {
-        let [
-            (left_pos, left_left, left_right),
-            (right_pos, right_left, right_right),
-        ] = nodes;
-        (
-            self.node_digest(left_pos, left_left, left_right),
-            self.node_digest(right_pos, right_left, right_right),
-        )
     }
 
     fn leaf_digests(&self, leaves: &[(merkle::Position<F>, &[u8])]) -> Vec<H::Digest> {
@@ -751,28 +715,6 @@ mod tests {
                 &right,
             );
         assert_ne!(got, got_graftable);
-    }
-
-    #[test]
-    fn test_grafted_hasher_node_digest_pair_matches_node_digest() {
-        const GH: u32 = 2;
-        let a = Sha256::fill(0x01);
-        let b = Sha256::fill(0x02);
-        let c = Sha256::fill(0x03);
-        let d = Sha256::fill(0x04);
-
-        let grafted = GraftedHasher::<mmr::Family, _>::new(qmdb::hasher::<Sha256>(), GH);
-        let left_pos = mmr::Family::subtree_root_position(Location::new(0), 1);
-        let right_pos = mmr::Family::subtree_root_position(Location::new(2), 1);
-
-        let paired = grafted.node_digest_pair([(left_pos, &a, &b), (right_pos, &c, &d)]);
-        assert_eq!(
-            paired,
-            (
-                grafted.node_digest(left_pos, &a, &b),
-                grafted.node_digest(right_pos, &c, &d),
-            )
-        );
     }
 
     #[test]
