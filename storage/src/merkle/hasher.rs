@@ -1,6 +1,7 @@
 //! Shared hasher trait and standard implementation for Merkle-family data structures.
 
 use crate::merkle::{Bagging, Error, Family, Location, Position};
+use alloc::vec::Vec;
 use commonware_cryptography::{Digest, Hasher as CHasher};
 use core::marker::PhantomData;
 
@@ -40,10 +41,25 @@ pub trait Hasher<F: Family>: Clone + Send + Sync {
         nodes: [(Position<F>, &Self::Digest, &Self::Digest); 2],
     ) -> (Self::Digest, Self::Digest);
 
+    /// Computes the digests of many nodes, each given as its position and the digests of its
+    /// children, so the hasher can hash them together.
+    ///
+    /// Must be equivalent to one [`node_digest`](Self::node_digest) call per node, in order.
+    fn node_digests(
+        &self,
+        nodes: &[(Position<F>, Self::Digest, Self::Digest)],
+    ) -> Vec<Self::Digest>;
+
     /// Computes the digest for a leaf given its position and the element it represents.
     fn leaf_digest(&self, pos: Position<F>, element: &[u8]) -> Self::Digest {
         self.hash(&[&(*pos).to_be_bytes(), element])
     }
+
+    /// Computes the digests of many leaves, each given as its position and the element it
+    /// represents, so the hasher can hash them together.
+    ///
+    /// Must be equivalent to one [`leaf_digest`](Self::leaf_digest) call per leaf, in order.
+    fn leaf_digests(&self, leaves: &[(Position<F>, &[u8])]) -> Vec<Self::Digest>;
 
     /// Compute the digest of a byte slice.
     fn digest(&self, data: &[u8]) -> Self::Digest {
@@ -210,6 +226,35 @@ impl<F: Family, H: CHasher> Hasher<F> for Standard<H> {
             &[&(*right_pos).to_be_bytes(), right_left, right_right],
         )
     }
+
+    fn node_digests(
+        &self,
+        nodes: &[(Position<F>, Self::Digest, Self::Digest)],
+    ) -> Vec<Self::Digest> {
+        let positions: Vec<[u8; 8]> = nodes
+            .iter()
+            .map(|(pos, ..)| (**pos).to_be_bytes())
+            .collect();
+        let messages: Vec<[&[u8]; 3]> = positions
+            .iter()
+            .zip(nodes)
+            .map(|(pos, (_, left, right))| [pos.as_slice(), left.as_ref(), right.as_ref()])
+            .collect();
+        H::hash_many_parts(&messages)
+    }
+
+    fn leaf_digests(&self, leaves: &[(Position<F>, &[u8])]) -> Vec<Self::Digest> {
+        let positions: Vec<[u8; 8]> = leaves
+            .iter()
+            .map(|(pos, _)| (**pos).to_be_bytes())
+            .collect();
+        let messages: Vec<[&[u8]; 2]> = positions
+            .iter()
+            .zip(leaves)
+            .map(|(pos, (_, element))| [pos.as_slice(), *element])
+            .collect();
+        H::hash_many_parts(&messages)
+    }
 }
 
 impl<F: Family, T: Hasher<F>> Hasher<F> for &T {
@@ -234,6 +279,10 @@ impl<F: Family, T: Hasher<F>> Hasher<F> for &T {
 
     fn leaf_digest(&self, pos: Position<F>, element: &[u8]) -> Self::Digest {
         (**self).leaf_digest(pos, element)
+    }
+
+    fn leaf_digests(&self, leaves: &[(Position<F>, &[u8])]) -> Vec<Self::Digest> {
+        (**self).leaf_digests(leaves)
     }
 
     fn digest(&self, data: &[u8]) -> Self::Digest {
@@ -282,6 +331,13 @@ impl<F: Family, T: Hasher<F>> Hasher<F> for &T {
     ) -> (Self::Digest, Self::Digest) {
         (**self).node_digest_pair(nodes)
     }
+
+    fn node_digests(
+        &self,
+        nodes: &[(Position<F>, Self::Digest, Self::Digest)],
+    ) -> Vec<Self::Digest> {
+        (**self).node_digests(nodes)
+    }
 }
 
 #[cfg(test)]
@@ -291,8 +347,9 @@ mod tests {
         Bagging::{BackwardFold, ForwardFold},
         mmr::{Location, Position, StandardHasher as Standard},
     };
-    use alloc::vec::Vec;
-    use commonware_cryptography::{Hasher as CHasher, Sha256, sha256};
+    use commonware_cryptography::{Blake3, Hasher as CHasher, Sha256, sha256};
+    use commonware_utils::test_rng;
+    use rand::Rng as _;
 
     #[test]
     fn test_leaf_digest_sha256() {
@@ -321,6 +378,72 @@ mod tests {
             hasher.node_digest_pair([(Position::new(2), &d1, &d2), (Position::new(5), &d3, &d4)]);
         assert_eq!(left, hasher.node_digest(Position::new(2), &d1, &d2));
         assert_eq!(right, hasher.node_digest(Position::new(5), &d3, &d4));
+    }
+
+    #[test]
+    fn test_node_digests_sha256() {
+        test_node_digests::<Sha256>();
+    }
+
+    #[test]
+    fn test_node_digests_blake3() {
+        test_node_digests::<Blake3>();
+    }
+
+    #[test]
+    fn test_leaf_digests_sha256() {
+        test_leaf_digests::<Sha256>();
+    }
+
+    #[test]
+    fn test_leaf_digests_blake3() {
+        test_leaf_digests::<Blake3>();
+    }
+
+    fn test_leaf_digests<H: CHasher>() {
+        let hasher: Standard<H> = Standard::new(ForwardFold);
+        let mut data = vec![0u8; 4096];
+        test_rng().fill_bytes(&mut data);
+        for count in [0, 1, 2, 3, 16, 17, 33] {
+            // Equal lengths (fixed operations) and varying lengths (variable operations).
+            for varying in [false, true] {
+                let leaves: Vec<(Position, &[u8])> = (0..count)
+                    .map(|i| {
+                        let len = if varying { 33 + 7 * i } else { 105 };
+                        (Position::new(3 * i as u64), &data[i..i + len])
+                    })
+                    .collect();
+                let expected: Vec<_> = leaves
+                    .iter()
+                    .map(|(pos, element)| hasher.leaf_digest(*pos, element))
+                    .collect();
+                assert_eq!(
+                    hasher.leaf_digests(&leaves),
+                    expected,
+                    "count {count} varying {varying}"
+                );
+            }
+        }
+    }
+
+    fn test_node_digests<H: CHasher>() {
+        let hasher: Standard<H> = Standard::new(ForwardFold);
+        for count in [0, 1, 2, 3, 16, 17, 33] {
+            let nodes: Vec<_> = (0..count as u64)
+                .map(|i| {
+                    (
+                        Position::new(2 + 3 * i),
+                        test_digest::<H>(2 * i as u8),
+                        test_digest::<H>(2 * i as u8 + 1),
+                    )
+                })
+                .collect();
+            let expected: Vec<_> = nodes
+                .iter()
+                .map(|(pos, left, right)| hasher.node_digest(*pos, left, right))
+                .collect();
+            assert_eq!(hasher.node_digests(&nodes), expected, "count {count}");
+        }
     }
 
     #[test]

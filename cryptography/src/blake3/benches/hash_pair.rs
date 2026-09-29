@@ -1,4 +1,4 @@
-use commonware_cryptography::{Hasher, Sha256};
+use commonware_cryptography::{Hasher, blake3::Blake3};
 use commonware_utils::test_rng;
 use criterion::{Criterion, criterion_group};
 use rand::Rng;
@@ -37,13 +37,13 @@ fn bench_hash_pair(c: &mut Criterion) {
         ),
     ] {
         c.bench_function(&format!("{}/shape={shape}", module_path!()), |b| {
-            b.iter(|| Sha256::hash_pair(black_box(&parts[0]), black_box(&parts[1])));
+            b.iter(|| Blake3::hash_pair(black_box(&parts[0]), black_box(&parts[1])));
         });
     }
 }
 
 fn bench_dependent_hash_pair(c: &mut Criterion) {
-    crate::hash_workloads::bench_dependent_hash_pair::<Sha256>(c, module_path!());
+    crate::hash_workloads::bench_dependent_hash_pair::<Blake3>(c, module_path!());
 }
 
 criterion_group!(benches, bench_hash_pair, bench_dependent_hash_pair);
