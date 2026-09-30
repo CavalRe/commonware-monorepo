@@ -1,0 +1,69 @@
+//! Voter actor for Minimmit consensus.
+//!
+//! The voter is the main consensus participant that processes proposals, votes,
+//! and drives view progression.
+//!
+//! ## Crash Recovery
+//!
+//! The voter uses a journal to persist votes and certificates for crash recovery.
+//! On restart, the journal is replayed to rebuild state, ensuring we don't
+//! double-vote and can resume from where we left off.
+
+use crate::{
+    Automaton, Relay, Reporter,
+    minimmit::types::Activity,
+    simplex::elector::Config as Elector,
+    types::{Epoch, ViewDelta},
+};
+use commonware_cryptography::{Digest, certificate::Scheme};
+use commonware_p2p::Blocker;
+use commonware_parallel::Strategy;
+use commonware_runtime::buffer::paged::CacheRef;
+use std::{num::NonZeroUsize, time::Duration};
+
+mod actor;
+pub use actor::Actor;
+
+mod ingress;
+pub use ingress::Mailbox;
+
+mod egress;
+
+/// Configuration for the voter actor.
+pub struct Config<S, L, B, D, A, R, F, T>
+where
+    S: Scheme,
+    L: Elector<S>,
+    B: Blocker,
+    D: Digest,
+    A: Automaton,
+    R: Relay<Digest = D, PublicKey = S::PublicKey, Plan = crate::simplex::Plan<S::PublicKey>>,
+    F: Reporter<Activity = Activity<S, D>>,
+    T: Strategy,
+{
+    pub scheme: S,
+    pub elector: L,
+    pub blocker: B,
+    pub automaton: A,
+    /// Finalized genesis payload for this epoch.
+    pub genesis: D,
+    pub relay: R,
+    pub reporter: F,
+    pub strategy: T,
+
+    /// Partition name for the journal.
+    pub partition: String,
+    /// Number of bytes to buffer when replaying during startup.
+    pub replay_buffer: NonZeroUsize,
+    /// The size of the write buffer to use for each blob in the journal.
+    pub write_buffer: NonZeroUsize,
+    /// Page cache for the journal.
+    pub page_cache: CacheRef,
+
+    pub epoch: Epoch,
+    pub mailbox_size: usize,
+    pub leader_timeout: Duration,
+    pub notarization_timeout: Duration,
+    pub nullify_retry: Duration,
+    pub activity_timeout: ViewDelta,
+}

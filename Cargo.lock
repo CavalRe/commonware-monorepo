@@ -1437,6 +1437,7 @@ dependencies = [
  "commonware-storage",
  "commonware-utils",
  "futures",
+ "num-traits",
  "paste",
  "pin-project",
  "rand 0.10.2",

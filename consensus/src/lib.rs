@@ -11,6 +11,8 @@
 
 use commonware_macros::stability_scope;
 
+commonware_macros::stability_mod!(ALPHA, pub mod minimmit);
+
 stability_scope!(BETA {
     use commonware_codec::{Codec, Encode};
     use commonware_cryptography::Digestible;

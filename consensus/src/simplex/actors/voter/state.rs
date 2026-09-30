@@ -1119,10 +1119,9 @@ impl<E: Clock + CryptoRng + Metrics, S: Scheme<D>, L: Elector<S>, D: Digest> Sta
         let child = parent.next();
         if self.previous_in_term(child) != Some(parent)
             || child <= self.last_finalized
-            || !self
+            || self
                 .views
-                .get(&child)
-                .is_some_and(|round| round.notarization().is_some())
+                .get(&child).is_none_or(|round| round.notarization().is_none())
         {
             return;
         }
