@@ -70,12 +70,14 @@ pub(crate) enum Reconciliation {
 
 /// A restartable cut through recursive ordering and final-sweep emission.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub(crate) struct HistoryState<D: Digest> {
     history: D,
     ordered: Frontier<D>,
     emitted: Frontier<D>,
 }
 
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 impl<D: Digest> HistoryState<D> {
     /// Creates a state whose emitted frontier contains its recursive ordering frontier.
     pub(crate) fn new(
@@ -365,6 +367,7 @@ pub(crate) struct SlotStream<D: Digest> {
     passes: Passes,
 }
 
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 impl<D: Digest> SlotStream<D> {
     /// Creates the full traversal from `base` to `target`, with pass A ending at `proposed`.
     pub(crate) fn new(
@@ -421,6 +424,7 @@ pub(crate) struct FinalSweep<D: Digest> {
     planned: u64,
 }
 
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 impl<D: Digest> FinalSweep<D> {
     pub(crate) fn new(
         base: &[BlockRef<D>],
@@ -442,7 +446,7 @@ impl<D: Digest> FinalSweep<D> {
         })
     }
 
-    fn from_lqc<H, V>(
+    pub(crate) fn from_lqc<H, V>(
         base: &[BlockRef<D>],
         certificate: &Lqc<V, D>,
         config: CodecConfig,
@@ -613,10 +617,8 @@ fn validate_monotone<D: Digest>(base: &[BlockRef<D>], target: &[BlockRef<D>]) ->
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        super::fuzz::{Coordinate, coordinate, frontier, reference, remaining_maxima},
-        *,
-    };
+    use super::super::fuzz::{Coordinate, coordinate, frontier, reference, remaining_maxima};
+    use super::*;
     use crate::{
         multimmit::{
             algebra::{FinalTips, PoolExtractor},

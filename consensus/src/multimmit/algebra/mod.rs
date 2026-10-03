@@ -5,8 +5,12 @@
 //! certificate transcripts, hashing canonical encodings under a namespace. Nothing here holds
 //! protocol state, touches storage, or performs runtime work.
 
+// Native consensus also uses incremental extraction and proposal-path helpers.
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 mod path;
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 mod tips;
+#[cfg(not(target_arch = "wasm32"))]
 mod validate;
 
 #[cfg(any(test, feature = "mocks"))]
@@ -15,7 +19,10 @@ pub(crate) mod fuzz;
 mod reference;
 
 use crate::multimmit::types::ChainId;
-pub(crate) use tips::{FinalTips, PoolExtractor, Tips, VqcExtraction};
+pub(crate) use tips::FinalTips;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use tips::{PoolExtractor, Tips, VqcExtraction};
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) use validate::{
     CertificateDerivations, DerivedVqc, ValidatedLqc, ValidatedVqc, ValidatedVqcParts,
     VerifiedVote, validate_lqc, validate_vqc, validate_vqc_votes, validate_vqc_with_votes,

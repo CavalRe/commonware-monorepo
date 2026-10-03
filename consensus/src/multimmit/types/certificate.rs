@@ -9,9 +9,7 @@ use super::{
     },
     canonical_digest,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use super::{DigestedLeader, VoteBody};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::types::Participant;
 use crate::{
     Epochable, Heightable, Viewable,
@@ -295,7 +293,6 @@ impl<V: Variant, D: Digest> Vqc<V, D> {
 }
 
 /// Rebuilds the vote of every signer `tally` attests for `leader`, in signer order.
-#[cfg(not(target_arch = "wasm32"))]
 fn expand_tally<V: Variant, D: Digest>(
     leader: &LeaderBlock<V, D>,
     tally: &Tally<D>,
@@ -444,7 +441,6 @@ impl<V: Variant, D: Digest> Lqc<V, D> {
     /// Rebuilds the vote of every tallied signer, in signer order.
     ///
     /// `leader_digest` is the digest of [`Self::leader`], which the caller derives once.
-    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn expand_votes(
         &self,
         leader_digest: D,

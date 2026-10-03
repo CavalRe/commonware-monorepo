@@ -106,9 +106,11 @@
 //! - [`marshal`]: ordering, block custody, and delivery.
 //! - [`scheme`]: the aggregate and threshold signatures behind votes and certificates.
 
+pub(crate) mod algebra;
 pub mod config;
 #[cfg(any(test, feature = "mocks"))]
 pub(crate) mod fuzz;
+pub mod ordering;
 pub mod scheme;
 pub mod types;
 
@@ -127,7 +129,6 @@ pub mod docs {
 cfg_if::cfg_if! {
     if #[cfg(not(target_arch = "wasm32"))] {
         mod actors;
-        pub(crate) mod algebra;
         mod engine;
         pub(crate) mod machine;
         pub mod marshal;

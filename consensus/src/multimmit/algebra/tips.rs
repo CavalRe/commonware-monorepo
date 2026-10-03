@@ -6,10 +6,12 @@ use super::{
 };
 #[cfg(any(test, feature = "mocks"))]
 use crate::multimmit::types::Vqc;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::multimmit::types::{FinalityFact, FinalityId};
 use crate::{
     multimmit::types::{
-        BlockRef, ChainId, CodecConfig, DigestedLeader, FinalityFact, FinalityId, LeaderBlock, Lqc,
-        Position, SelectedCommitments, VoteBody,
+        BlockRef, ChainId, CodecConfig, DigestedLeader, LeaderBlock, Lqc, Position,
+        SelectedCommitments, VoteBody,
     },
     types::Epoch,
 };
@@ -449,6 +451,7 @@ impl<D: Digest> FinalTips<D> {
 
     /// Returns the finality fact these tips give `leader`, identified by `id` and backed by
     /// `votes` distinct votes.
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn fact<V: Variant>(
         &self,
         id: FinalityId<D>,

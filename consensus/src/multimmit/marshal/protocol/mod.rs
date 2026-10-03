@@ -2,8 +2,5 @@
 
 pub(super) mod ancestry;
 pub(super) mod floor;
-pub(super) mod order;
+pub(super) use crate::multimmit::ordering::order;
 pub(super) mod paths;
-
-#[cfg(any(test, feature = "mocks"))]
-pub(crate) mod fuzz;

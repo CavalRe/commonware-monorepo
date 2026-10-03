@@ -25,7 +25,6 @@ impl<D: Digest> SelectedCommitments<D> {
     ///
     /// Requires every path to contain at least two references whose adjacent parent edges have
     /// been authenticated in `epoch`. The constructor does not check this.
-    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn new(epoch: Epoch, paths: Vec<Arc<[BlockRef<D>]>>) -> Self {
         Self {
             epoch,

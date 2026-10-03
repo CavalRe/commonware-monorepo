@@ -916,7 +916,6 @@ impl<'a, V: Variant, D: Digest> DigestedLeader<'a, V, D> {
     /// `digest` must equal `block.digest::<H>()` under the hasher the caller verifies with.
     /// Nothing checks this, and a mismatched digest makes every vote check against the pair
     /// judge the wrong block.
-    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) const fn with_digest(block: &'a LeaderBlock<V, D>, digest: D) -> Self {
         Self { block, digest }
     }

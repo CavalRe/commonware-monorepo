@@ -79,14 +79,14 @@ mod verifier;
 mod wire;
 
 pub use crate::multimmit::actors::util::Completion;
+#[cfg(any(test, feature = "mocks"))]
+pub(crate) use crate::multimmit::ordering::fuzz;
 pub use actors::backfill::{BackfillBridge, BackfillSubscriber};
 pub use config::{
     ArchiveConfig, ArchiveMode, Capacities, Config, ConfigError, Limits, Retention, Start,
 };
 pub use mailbox::Mailbox;
 pub use open::OpenError;
-#[cfg(any(test, feature = "mocks"))]
-pub(crate) use protocol::fuzz;
 pub use relay::Relay;
 pub use service::{Service, ServiceHandle, open};
 pub use types::{
