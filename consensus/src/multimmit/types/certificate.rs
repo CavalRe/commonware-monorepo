@@ -1,20 +1,18 @@
 //! Aggregate and recovered certificates for Multimmit.
 
 use super::{
-    Ballot, BlockRef, CertificateId, ConflictingVote, Error, LeaderBlock, Tally,
-    TransactionBlockHeader,
+    Ballot, BlockRef, CertificateId, ConflictingVote, DigestedLeader, Error, LeaderBlock, Tally,
+    TransactionBlockHeader, VoteBody,
     bounds::{
         MAX_U64_VARINT_SIZE, VARINT_BOUNDARIES, checked_product, checked_sum, encoded_len,
         largest_index_width_sum, signers_size,
     },
     canonical_digest,
 };
-use super::{DigestedLeader, VoteBody};
-use crate::types::Participant;
 use crate::{
     Epochable, Heightable, Viewable,
     multimmit::types::CodecConfig,
-    types::{Epoch, Height, Round, View},
+    types::{Epoch, Height, Participant, Round, View},
 };
 use bytes::BufMut;
 use commonware_codec::{

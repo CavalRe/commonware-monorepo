@@ -617,8 +617,10 @@ fn validate_monotone<D: Digest>(base: &[BlockRef<D>], target: &[BlockRef<D>]) ->
 
 #[cfg(test)]
 mod tests {
-    use super::super::fuzz::{Coordinate, coordinate, frontier, reference, remaining_maxima};
-    use super::*;
+    use super::{
+        super::fuzz::{Coordinate, coordinate, frontier, reference, remaining_maxima},
+        *,
+    };
     use crate::{
         multimmit::{
             algebra::{FinalTips, PoolExtractor},
